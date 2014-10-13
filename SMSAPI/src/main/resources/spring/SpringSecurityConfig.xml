@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:sec="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.1.xsd">
+
+	<sec:http pattern="/login.html" security="none" />
+
+	<bean id="ajaxTimeoutRedirectFilter"
+		class="com.aitrich.smsapi.controller.auth.AjaxTimeoutRedirectFilter">
+		<property name="customSessionExpiredErrorCode" value="901" />
+	</bean>
+
+	<sec:http access-denied-page="/accessDenied.html">
+		<sec:custom-filter ref="ajaxTimeoutRedirectFilter"
+			after="EXCEPTION_TRANSLATION_FILTER" />
+
+		<sec:intercept-url pattern="/admin/*" access="ROLE_SYSADMIN" />
+		<sec:intercept-url pattern="/reseller/*"
+			access="ROLE_RESELLER, ROLE_SYSADMIN" />
+		<sec:intercept-url pattern="/end-user/*"
+			access="ROLE_END_USER, ROLE_SYSADMIN" />
+
+		<sec:session-management>
+			<sec:concurrency-control max-sessions="1" />
+		</sec:session-management>
+
+		<sec:form-login login-page="/login.html"
+			authentication-failure-url="/login.html" default-target-url="/home.html" />
+		<sec:logout logout-success-url="/login.html" />
+	</sec:http>
+
+	<sec:authentication-manager alias="authenticationManager">
+		<sec:authentication-provider
+			user-service-ref="USER_DETAILS_SERVICE">
+			<!-- <sec:password-encoder ref="passwordEncoder"> <sec:salt-source ref="saltSource" 
+				/> </sec:password-encoder> -->
+		</sec:authentication-provider>
+	</sec:authentication-manager>
+
+	<bean id="passwordEncoder"
+		class="org.springframework.security.authentication.encoding.ShaPasswordEncoder">
+		<constructor-arg value="512" />
+	</bean>
+
+	<bean id="USER_DETAILS_SERVICE"
+		class="com.aitrich.smsapi.services.impl.SpringUserDetailsServiceImpl" />
+
+	<bean id="saltSource"
+		class="org.springframework.security.authentication.dao.ReflectionSaltSource">
+		<!-- Do not use username if it is likely to change. -->
+		<property name="userPropertyToUse" value="username" />
+	</bean>
+
+	<!-- Automatically receives AuthenticationEvent messages -->
+	<bean id="loggerListener"
+		class="org.springframework.security.authentication.event.LoggerListener" />
+</beans>
